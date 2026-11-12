@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍎 Яблочный Кликер</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    user-select: none;
+    overflow-x: hidden;
+  }
+
+  .game {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    padding: 24px;
+    max-width: 520px;
+    width: 100%;
+    text-align: center;
+  }
+
+  h1 { color: #c0392b; font-size: 26px; margin-bottom: 12px; }
+
+  .top-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+  }
+
+  .sound-btn {
+    background: #fff;
+    border: 2px solid #f0f0f0;
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sound-btn:hover { border-color: #e74c3c; }
+  .sound-btn.muted { opacity: 0.5; }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    background: #f5f5f5;
+    padding: 6px;
+    border-radius: 14px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px 6px;
+    border: none;
+    background: transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    color: #888;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    background: #fff;
+    color: #e74c3c;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .score-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 16px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .score-label {
+    font-size: 12px; color: #888;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .score { font-size: 38px; font-weight: bold; color: #e74c3c; }
+  .per-second { font-size: 13px; color: #27ae60; margin-top: 4px; }
+
+  .apple-area {
+    position: relative;
+    height: 200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .apple {
+    font-size: 130px;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.2));
+    line-height: 1;
+  }
+  .apple:active { transform: scale(0.9); }
+  .apple.pulse { animation: pulse 0.2s ease; }
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+
+  .floating {
+    position: absolute;
+    font-size: 24px;
+    font-weight: bold;
+    color: #e74c3c;
+    pointer-events: none;
+    animation: floatUp 1s ease-out forwards;
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -80px); }
+  }
+
+  .section-title {
+    font-size: 16px;
+    color: #c0392b;
+    margin-bottom: 10px;
+    font-weight: bold;
+  }
+
+  .upgrades { display: flex; flex-direction: column; gap: 8px; }
+
+  .upgrade {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff;
+    border: 2px solid #f0f0f0;
+    border-radius: 14px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+  }
+  .upgrade:hover:not(.disabled) {
+    border-color: #e74c3c;
+    transform: translateX(4px);
+  }
+  .upgrade.disabled { opacity: 0.5; cursor: not-allowed; }
+  .upgrade-icon { font-size: 30px; }
+  .upgrade-info { flex: 1; }
+  .upgrade-name { font-weight: bold; color: #333; font-size: 14px; }
+  .upgrade-desc { font-size: 11px; color: #888; }
+  .upgrade-cost { font-weight: bold; color: #e74c3c; font-size: 13px; }
+
+  .skins-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .skin {
+    background: #fff;
+    border: 3px solid #f0f0f0;
+    border-radius: 14px;
+    padding: 10px 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .skin:hover:not(.locked) {
+    border-color: #e74c3c;
+    transform: translateY(-2px);
+  }
+  .skin.active {
+    border-color: #27ae60;
+    background: #eaffea;
+    box-shadow: 0 0 0 3px rgba(39,174,96,0.2);
+  }
+  .skin.locked { opacity: 0.6; cursor: not-allowed; }
+  .skin-emoji { font-size: 38px; line-height: 1.2; }
+  .skin-name { font-size: 11px; color: #666; margin-top: 4px; }
+  .skin-price {
+    font-size: 11px; font-weight: bold;
+    color: #e74c3c; margin-top: 2px;
+  }
+  .skin.active .skin-price { color: #27ae60; }
+  .skin-check {
+    position: absolute; top: 4px; right: 6px;
+    color: #27ae60; font-weight: bold; font-size: 14px;
+  }
+
+  .achievements {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .ach {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff;
+    border: 2px solid #f0f0f0;
+    border-radius: 14px;
+    padding: 10px 14px;
+    text-align: left;
+    transition: all 0.3s;
+  }
+  .ach.unlocked {
+    border-color: #27ae60;
+    background: linear-gradient(135deg, #eaffea, #fff);
+  }
+  .ach-icon {
+    font-size: 26px;
+    filter: grayscale(1);
+    opacity: 0.5;
+    transition: all 0.3s;
+  }
+  .ach.unlocked .ach-icon {
+    filter: grayscale(0);
+    opacity: 1;
+    animation: pop 0.4s ease;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.5); }
+    70% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  .ach-info { flex: 1; }
+  .ach-name { font-weight: bold; font-size: 13px; color: #888; }
+  .ach.unlocked .ach-name { color: #27ae60; }
+  .ach-desc { font-size: 11px; color: #aaa; }
+  .ach.unlocked .ach-desc { color: #666; }
+  .ach-badge {
+    font-size: 11px; background: #27ae60; color: #fff;
+    padding: 2px 8px; border-radius: 20px; font-weight: bold;
+  }
+
+  .toast {
+    position: fixed;
+    top: 20px; left: 50%;
+    transform: translateX(-50%) translateY(-120%);
+    background: #27ae60;
+    color: #fff;
+    padding: 14px 22px;
+    border-radius: 14px;
+    font-weight: bold;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    z-index: 1000;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14px;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .reset-btn {
+    margin-top: 16px;
+    background: transparent;
+    border: 1px solid #ccc;
+    color: #999;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .reset-btn:hover { color: #e74c3c; border-color: #e74c3c; }
+
+  @media (max-width: 480px) {
+    .game { padding: 16px; }
+    .apple { font-size: 100px; }
+    .score { font-size: 32px; }
+    .apple-area { height: 170px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game">
+  <h1>🍎 Яблочный Кликер</h1>
+
+  <div class="top-bar">
+    <button class="sound-btn" id="soundBtn" onclick="toggleSound()">🔊</button>
+  </div>
+
+  <div class="score-box">
+    <div class="score-label">Собрано яблок</div>
+    <div class="score" id="score">0</div>
+    <div class="per-second" id="perSecond"></div>
+  </div>
+
+  <div class="apple-area" id="appleArea">
+    <div class="apple" id="apple">🍎</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="shop">🛒 Магазин</button>
+    <button class="tab" data-tab="skins">🎨 Яблоки</button>
+    <button class="tab" data-tab="ach">🏆 Достижения</button>
+  </div>
+
+  <div class="tab-content active" id="tab-shop">
+    <div class="section-title">Улучшения</div>
+    <div class="upgrades" id="upgrades"></div>
+  </div>
+
+  <div class="tab-content" id="tab-skins">
+    <div class="section-title">Выбери своё яблоко</div>
+    <div class="skins-grid" id="skinsGrid"></div>
+  </div>
+
+  <div class="tab-content" id="tab-ach">
+    <div class="section-title">Достижения <span id="achCount"></span></div>
+    <div class="achievements" id="achievementsList"></div>
+  </div>
+
+  <button class="reset-btn" onclick="resetGame()">Сбросить прогресс</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ===== Звуковой движок (Web Audio API) =====
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  let audioCtx = null;
+  let soundEnabled = true;
+  let lastClickSound = 0;
+
+  function initAudio() {
+    if (!audioCtx) audioCtx = new AudioCtx();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playClickSound() {
+    if (!soundEnabled) return;
+    const now = performance.now();
+    if (now - lastClickSound < 40) return;
+    lastClickSound = now;
+    initAudio();
+
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+
+    osc.type = 'sine';
+    const baseFreq = 620 + Math.random() * 120;
+    osc.frequency.setValueAtTime(baseFreq, t);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.6, t + 0.08);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1800, t);
+
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.06, t + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.13);
+  }
+
+  function playBuySound() {
+    if (!soundEnabled) return;
+    initAudio();
+    const t = audioCtx.currentTime;
+    [523.25, 659.25, 783.99].forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + i * 0.04);
+      gain.gain.setValueAtTime(0, t + i * 0.04);
+      gain.gain.linearRampToValueAtTime(0.05, t + i * 0.04 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.04 + 0.15);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t + i * 0.04);
+      osc.stop(t + i * 0.04 + 0.16);
+    });
+  }
+
+  function playAchievementSound() {
+    if (!soundEnabled) return;
+    initAudio();
+    const t = audioCtx.currentTime;
+    [659.25, 783.99, 987.77, 1318.51].forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t + i * 0.07);
+      gain.gain.setValueAtTime(0, t + i * 0.07);
+      gain.gain.linearRampToValueAtTime(0.045, t + i * 0.07 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.07 + 0.2);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t + i * 0.07);
+      osc.stop(t + i * 0.07 + 0.21);
+    });
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('soundBtn');
+    btn.textContent = soundEnabled ? '🔊' : '🔇';
+    btn.classList.toggle('muted', !soundEnabled);
+    if (soundEnabled) initAudio();
+    saveGame();
+  }
+
+  // ===== Скины =====
+  const SKINS = [
+    { id: 'red',     emoji: '🍎', name: 'Классика',  price: 0 },
+    { id: 'green',   emoji: '🍏', name: 'Зелёное',   price: 100 },
+    { id: 'candy',   emoji: '🍬', name: 'Конфета',   price: 500 },
+    { id: 'fire',    emoji: '🔥', name: 'Огненное',  price: 2000 },
+    { id: 'star',    emoji: '⭐', name: 'Звезда',    price: 10000 },
+    { id: 'diamond', emoji: '💎', name: 'Алмаз',     price: 50000 },
+    { id: 'crown',   emoji: '👑', name: 'Корона',    price: 200000 },
+    { id: 'rocket',  emoji: '🚀', name: 'Ракета',    price: 1000000 },
+    { id: 'gold',    emoji: '🏆', name: 'Легенда',   price: 5000000 }
+  ];
+
+  const ACHIEVEMENTS = [
+    { id: 'first',    icon: '🌱', name: 'Первый шаг',     desc: 'Кликни 1 раз',           check: s => s.totalClicked >= 1 },
+    { id: 'click100', icon: '👆', name: 'Кликер-новичок',  desc: 'Кликни 100 раз',         check: s => s.totalClicked >= 100 },
+    { id: 'click1000',icon: '💪', name: 'Кликер-мастер',   desc: 'Кликни 1000 раз',        check: s => s.totalClicked >= 1000 },
+    { id: 'click10k', icon: '🦾', name: 'Кликер-легенда',  desc: 'Кликни 10 000 раз',      check: s => s.totalClicked >= 10000 },
+    { id: 'apples100',icon: '🍏', name: 'Сотня',           desc: 'Собери 100 яблок',       check: s => s.apples >= 100 },
+    { id: 'apples1k', icon: '🧺', name: 'Корзина яблок',   desc: 'Собери 1 000 яблок',     check: s => s.apples >= 1000 },
+    { id: 'apples10k',icon: '🚛', name: 'Грузовик',        desc: 'Собери 10 000 яблок',    check: s => s.apples >= 10000 },
+    { id: 'apples1m', icon: '🏭', name: 'Яблочный магнат', desc: 'Собери 1 000 000 яблок', check: s => s.apples >= 1000000 },
+    { id: 'auto10',   icon: '⚙️', name: 'Автоматизация',   desc: '10 яблок в секунду',     check: s => s.autoPower >= 10 },
+    { id: 'auto100',  icon: '🤖', name: 'Роботизация',     desc: '100 яблок в секунду',    check: s => s.autoPower >= 100 },
+    { id: 'auto1000', icon: '🏭', name: 'Фабрика',         desc: '1000 яблок в секунду',   check: s => s.autoPower >= 1000 },
+    { id: 'buy1',     icon: '🛍️', name: 'Покупатель',      desc: 'Купи первое улучшение',  check: s => totalLevels(s) >= 1 },
+    { id: 'buy10',    icon: '🏪', name: 'Шопоголик',       desc: 'Купи 10 улучшений',      check: s => totalLevels(s) >= 10 },
+    { id: 'buy25',    icon: '🏬', name: 'Бизнесмен',       desc: 'Купи 25 улучшений',      check: s => totalLevels(s) >= 25 },
+    { id: 'skin1',    icon: '🎨', name: 'Модник',          desc: 'Открой первый скин',     check: s => s.ownedSkins.length >= 2 },
+    { id: 'skinAll',  icon: '🌈', name: 'Коллекционер',    desc: 'Открой все скины',       check: s => s.ownedSkins.length >= SKINS.length }
+  ];
+
+  let state = {
+    apples: 0,
+    totalClicked: 0,
+    totalEarned: 0,
+    clickPower: 1,
+    autoPower: 0,
+    upgrades: { basket: 0, tree: 0, farm: 0, factory: 0, spaceship: 0 },
+    currentSkin: 'red',
+    ownedSkins: ['red'],
+    unlockedAchievements: [],
+    soundEnabled: true
+  };
+
+  const UPGRADES = [
+    { id: 'basket',   icon: '🧺', name: 'Корзина',          desc: '+1 яблоко за клик',    baseCost: 10,    mult: 1.5, effect: () => state.clickPower += 1 },
+    { id: 'tree',     icon: '🌳', name: 'Яблоня',           desc: '+1 яблоко в секунду',  baseCost: 50,    mult: 1.6, effect: () => state.autoPower += 1 },
+    { id: 'farm',     icon: '🚜', name: 'Ферма',            desc: '+5 яблок в секунду',   baseCost: 300,   mult: 1.7, effect: () => state.autoPower += 5 },
+    { id: 'factory',  icon: '🏭', name: 'Фабрика сока',     desc: '+25 яблок в секунду',  baseCost: 2000,  mult: 1.8, effect: () => state.autoPower += 25 },
+    { id: 'spaceship',icon: '🚀', name: 'Космический сад',  desc: '+150 яблок в секунду', baseCost: 15000, mult: 1.9, effect: () => state.autoPower += 150 }
+  ];
+
+  const $ = id => document.getElementById(id);
+  const scoreEl = $('score');
+  const perSecondEl = $('perSecond');
+  const appleEl = $('apple');
+  const appleArea = $('appleArea');
+  const upgradesEl = $('upgrades');
+  const skinsGrid = $('skinsGrid');
+  const achievementsList = $('achievementsList');
+  const achCount = $('achCount');
+  const toast = $('toast');
+
+  function formatNumber(n) {
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + ' млрд';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + ' млн';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + ' тыс';
+    return Math.floor(n).toString();
+  }
+
+  function getCost(upg) {
+    return Math.floor(upg.baseCost * Math.pow(upg.mult, state.upgrades[upg.id]));
+  }
+
+  function totalLevels(s) {
+    return Object.values(s.upgrades).reduce((a, b) => a + b, 0);
+  }
+
+  function getSkin(id) {
+    return SKINS.find(s => s.id === id);
+  }
+
+  let toastTimer;
+  function showToast(text) {
+    toast.textContent = '🏆 ' + text;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+
+  function checkAchievements() {
+    ACHIEVEMENTS.forEach(ach => {
+      if (!state.unlockedAchievements.includes(ach.id) && ach.check(state)) {
+        state.unlockedAchievements.push(ach.id);
+        showToast('Достижение: ' + ach.name);
+        playAchievementSound();
+      }
+    });
+  }
+
+  function render() {
+    scoreEl.textContent = formatNumber(state.apples);
+    perSecondEl.textContent = state.autoPower > 0
+      ? `+${formatNumber(state.autoPower)} в секунду` : '';
+    appleEl.textContent = getSkin(state.currentSkin).emoji;
+
+    upgradesEl.innerHTML = '';
+    UPGRADES.forEach(upg => {
+      const cost = getCost(upg);
+      const level = state.upgrades[upg.id];
+      const canAfford = state.apples >= cost;
+      const div = document.createElement('div');
+      div.className = 'upgrade' + (canAfford ? '' : ' disabled');
+      div.innerHTML = `
+        <div class="upgrade-icon">${upg.icon}</div>
+        <div class="upgrade-info">
+          <div class="upgrade-name">${upg.name} ${level > 0 ? `(ур. ${level})` : ''}</div>
+          <div class="upgrade-desc">${upg.desc}</div>
+        </div>
+        <div class="upgrade-cost">${formatNumber(cost)} 🍎</div>
+      `;
+      div.onclick = () => buyUpgrade(upg);
+      upgradesEl.appendChild(div);
+    });
+
+    skinsGrid.innerHTML = '';
+    SKINS.forEach(skin => {
+      const owned = state.ownedSkins.includes(skin.id);
+      const active = state.currentSkin === skin.id;
+      const canBuy = state.apples >= skin.price;
+      const div = document.createElement('div');
+      div.className = 'skin' + (active ? ' active' : '') + (!owned && !canBuy ? ' locked' : '');
+      div.innerHTML = `
+        ${active ? '<span class="skin-check">✓</span>' : ''}
+        <div class="skin-emoji">${skin.emoji}</div>
+        <div class="skin-name">${skin.name}</div>
+        <div class="skin-price">${owned ? (active ? 'Выбрано' : 'Выбрать') : formatNumber(skin.price) + ' 🍎'}</div>
+      `;
+      div.onclick = () => selectSkin(skin);
+      skinsGrid.appendChild(div);
+    });
+
+    achievementsList.innerHTML = '';
+    ACHIEVEMENTS.forEach(ach => {
+      const unlocked = state.unlockedAchievements.includes(ach.id);
+      const div = document.createElement('div');
+      div.className = 'ach' + (unlocked ? ' unlocked' : '');
+      div.innerHTML = `
+        <div class="ach-icon">${ach.icon}</div>
+        <div class="ach-info">
+          <div class="ach-name">${ach.name}</div>
+          <div class="ach-desc">${ach.desc}</div>
+        </div>
+        ${unlocked ? '<div class="ach-badge">✓</div>' : ''}
+      `;
+      achievementsList.appendChild(div);
+    });
+    achCount.textContent = `${state.unlockedAchievements.length}/${ACHIEVEMENTS.length}`;
+  }
+
+  appleEl.addEventListener('click', (e) => {
+    const gain = state.clickPower;
+    state.apples += gain;
+    state.totalEarned += gain;
+    state.totalClicked++;
+    appleEl.classList.remove('pulse');
+    void appleEl.offsetWidth;
+    appleEl.classList.add('pulse');
+    spawnFloating(e.clientX, e.clientY, gain);
+    playClickSound();
+    checkAchievements();
+    render();
+    saveGame();
+  });
+
+  function spawnFloating(x, y, amount) {
+    const rect = appleArea.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'floating';
+    el.textContent = '+' + amount;
+    el.style.left = (x - rect.left) + 'px';
+    el.style.top = (y - rect.top) + 'px';
+    appleArea.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+  }
+
+  function buyUpgrade(upg) {
+    const cost = getCost(upg);
+    if (state.apples < cost) return;
+    state.apples -= cost;
+    state.upgrades[upg.id]++;
+    upg.effect();
+    checkAchievements();
+    playBuySound();
+    render();
+    saveGame();
+  }
+
+  function selectSkin(skin) {
+    const owned = state.ownedSkins.includes(skin.id);
+    if (owned) {
+      state.currentSkin = skin.id;
+      render();
+      saveGame();
+      return;
+    }
+    if (state.apples < skin.price) return;
+    state.apples -= skin.price;
+    state.ownedSkins.push(skin.id);
+    state.currentSkin = skin.id;
+    checkAchievements();
+    playBuySound();
+    render();
+    saveGame();
+  }
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      $('tab-' + tab.dataset.tab).classList.add('active');
+    };
+  });
+
+  setInterval(() => {
+    if (state.autoPower > 0) {
+      state.apples += state.autoPower;
+      state.totalEarned += state.autoPower;
+      checkAchievements();
+      render();
+    }
+  }, 1000);
+
+  function saveGame() {
+    try {
+      state.soundEnabled = soundEnabled;
+      localStorage.setItem('appleClicker', JSON.stringify(state));
+    } catch (e) {}
+  }
+
+  function loadGame() {
+    try {
+      const saved = localStorage.getItem('appleClicker');
+      if (saved) {
+        const p = JSON.parse(saved);
+        state.apples = p.apples || 0;
+        state.totalClicked = p.totalClicked || 0;
+        state.totalEarned = p.totalEarned || 0;
+        state.upgrades = { ...state.upgrades, ...(p.upgrades || {}) };
+        state.currentSkin = p.currentSkin || 'red';
+        state.ownedSkins = p.ownedSkins || ['red'];
+        state.unlockedAchievements = p.unlockedAchievements || [];
+        state.soundEnabled = p.soundEnabled !== undefined ? p.soundEnabled : true;
+        soundEnabled = state.soundEnabled;
+        state.clickPower = 1 + state.upgrades.basket;
+        state.autoPower =
+          state.upgrades.tree * 1 +
+          state.upgrades.farm * 5 +
+          state.upgrades.factory * 25 +
+          state.upgrades.spaceship * 150;
+
+        const btn = document.getElementById('soundBtn');
+        if (btn) {
+          btn.textContent = soundEnabled ? '🔊' : '🔇';
+          btn.classList.toggle('muted', !soundEnabled);
+        }
+      }
+    } catch (e) {}
+  }
+
+  function resetGame() {
+    if (!confirm('Точно сбросить весь прогресс?')) return;
+    localStorage.removeItem('appleClicker');
+    state = {
+      apples: 0,
+      totalClicked: 0,
+      totalEarned: 0,
+      clickPower: 1,
+      autoPower: 0,
+      upgrades: { basket: 0, tree: 0, farm: 0, factory: 0, spaceship: 0 },
+      currentSkin: 'red',
+      ownedSkins: ['red'],
+      unlockedAchievements: [],
+      soundEnabled: true
+    };
+    soundEnabled = true;
+    const btn = document.getElementById('soundBtn');
+    if (btn) {
+      btn.textContent = '🔊';
+      btn.classList.remove('muted');
+    }
+    render();
+  }
+
+  loadGame();
+  checkAchievements();
+  render();
+</script>
+
+</body>
+</html>
